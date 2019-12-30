@@ -6,6 +6,7 @@ type Service struct {
 	ControlURL  string `xml:"controlURL"`
 	EventSubURL string `xml:"eventSubURL"`
 	SCPDURL     string `xml:"SCPDURL"`
+	Actions     []Action
 }
 
 type Device struct {
@@ -25,8 +26,6 @@ type Device struct {
 type Action struct {
 	Name      string     `xml:"name"`
 	Arguments []Argument `xml:"argumentList>argument"`
-
-	Service Service
 }
 
 type Argument struct {

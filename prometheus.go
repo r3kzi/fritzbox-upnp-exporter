@@ -2,83 +2,102 @@ package main
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/spf13/viper"
 	"strconv"
 )
 
 type FritzBoxCollector struct {
-	PhysicalLinkStatus         *prometheus.Desc
-	Layer1DownstreamMaxBitRate *prometheus.Desc
-	Layer1UpstreamMaxBitRate   *prometheus.Desc
-	TotalBytesSent             *prometheus.Desc
-	TotalBytesReceived         *prometheus.Desc
-	TotalPacketsSent           *prometheus.Desc
-	TotalPacketsReceived       *prometheus.Desc
+	Config *Config
 }
 
-func newFritzBoxCollector() *FritzBoxCollector {
-	return &FritzBoxCollector{
-		PhysicalLinkStatus: prometheus.NewDesc(
+type Metric struct {
+	Name string
+	Desc *prometheus.Desc
+}
+
+var metrics = []Metric{
+	{
+		Name: "PhysicalLinkStatus",
+		Desc: prometheus.NewDesc(
 			"fritzbox_wan_layer1_link_status",
 			"Status of physical link (Up = 1)",
 			nil,
 			nil,
 		),
-		Layer1DownstreamMaxBitRate: prometheus.NewDesc(
+	},
+	{
+		Name: "Layer1DownstreamMaxBitRate",
+		Desc: prometheus.NewDesc(
 			"fritzbox_wan_layer1_downstream_max_bitrate",
 			"Layer1 downstream max bitrate",
 			nil,
 			nil,
 		),
-		Layer1UpstreamMaxBitRate: prometheus.NewDesc(
+	},
+	{
+		Name: "Layer1UpstreamMaxBitRate",
+		Desc: prometheus.NewDesc(
 			"fritzbox_wan_layer1_upstream_max_bitrate",
 			"Layer1 upstream max bitrate",
 			nil,
 			nil,
 		),
-		TotalBytesSent: prometheus.NewDesc(
+	},
+	{
+		Name: "TotalBytesSent",
+		Desc: prometheus.NewDesc(
 			"fritzbox_wan_bytes_sent",
 			"bytes sent on gateway WAN interface",
 			nil,
 			nil,
 		),
-		TotalBytesReceived: prometheus.NewDesc(
+	},
+	{
+		Name: "TotalBytesReceived",
+		Desc: prometheus.NewDesc(
 			"fritzbox_wan_bytes_received",
 			"bytes received on gateway WAN interface",
 			nil,
 			nil,
 		),
-		TotalPacketsSent: prometheus.NewDesc(
+	},
+	{
+		Name: "TotalPacketsSent",
+		Desc: prometheus.NewDesc(
 			"fritzbox_wan_packets_sent",
 			"packets sent on gateway WAN interface",
 			nil,
 			nil,
 		),
-		TotalPacketsReceived: prometheus.NewDesc(
+	},
+	{
+		Name: "TotalPacketsReceived",
+		Desc: prometheus.NewDesc(
 			"fritzbox_wan_packets_received",
 			"packets received on gateway WAN interface",
 			nil,
 			nil,
 		),
+	},
+}
+
+func newFritzBoxCollector(config *Config) *FritzBoxCollector {
+	return &FritzBoxCollector{
+		Config: config,
 	}
 }
 
 func (collector *FritzBoxCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- collector.PhysicalLinkStatus
-	ch <- collector.Layer1DownstreamMaxBitRate
-	ch <- collector.Layer1UpstreamMaxBitRate
-	ch <- collector.TotalBytesSent
-	ch <- collector.TotalBytesReceived
-	ch <- collector.TotalPacketsSent
-	ch <- collector.TotalPacketsReceived
+	for _, metric := range metrics {
+		ch <- metric.Desc
+	}
 }
 
 func (collector *FritzBoxCollector) Collect(ch chan<- prometheus.Metric) {
-	uPnPClient := newUPnPClient(viper.GetString("url"), viper.GetString("username"), viper.GetString("password"))
-	metrics := uPnPClient.execute()
+	uPnPClient := NewUPnPClient(collector.Config.URL, collector.Config.Username, collector.Config.Password)
+	values := uPnPClient.Execute()
 
 	extract := func(metric string) float64 {
-		for k, v := range metrics {
+		for k, v := range values {
 			if k == metric {
 				if s, err := strconv.ParseFloat(v, 64); err == nil {
 					return s
@@ -91,11 +110,8 @@ func (collector *FritzBoxCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 		return 0.0
 	}
-	ch <- prometheus.MustNewConstMetric(collector.PhysicalLinkStatus, prometheus.GaugeValue, extract("PhysicalLinkStatus"))
-	ch <- prometheus.MustNewConstMetric(collector.Layer1DownstreamMaxBitRate, prometheus.GaugeValue, extract("Layer1DownstreamMaxBitRate"))
-	ch <- prometheus.MustNewConstMetric(collector.Layer1UpstreamMaxBitRate, prometheus.GaugeValue, extract("Layer1UpstreamMaxBitRate"))
-	ch <- prometheus.MustNewConstMetric(collector.TotalBytesSent, prometheus.GaugeValue, extract("TotalBytesSent"))
-	ch <- prometheus.MustNewConstMetric(collector.TotalBytesReceived, prometheus.GaugeValue, extract("TotalBytesReceived"))
-	ch <- prometheus.MustNewConstMetric(collector.TotalPacketsSent, prometheus.GaugeValue, extract("TotalPacketsSent"))
-	ch <- prometheus.MustNewConstMetric(collector.TotalPacketsReceived, prometheus.GaugeValue, extract("TotalPacketsReceived"))
+
+	for _, metric := range metrics {
+		ch <- prometheus.MustNewConstMetric(metric.Desc, prometheus.GaugeValue, extract(metric.Name))
+	}
 }

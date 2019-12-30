@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,17 +13,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func init() {
-	prometheus.MustRegister(newFritzBoxCollector())
-}
-
 func main() {
-	pflag.String("url", "fritz.box", "FritzBox URL")
-	pflag.String("username", "admin", "FritzBox User")
-	pflag.String("password", "admin", "FritzBox Password")
-	pflag.Parse()
 
-	viper.BindPFlags(pflag.CommandLine)
+	var config Config
+	err := parse(&config)
+	if err != nil {
+		log.Fatalf("Could not parse config: %v\n", err)
+	}
+
+	prometheus.MustRegister(newFritzBoxCollector(&config))
 
 	log.Info("Server is starting...")
 
