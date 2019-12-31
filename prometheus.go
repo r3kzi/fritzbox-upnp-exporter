@@ -93,7 +93,7 @@ func (collector *FritzBoxCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (collector *FritzBoxCollector) Collect(ch chan<- prometheus.Metric) {
-	uPnPClient := NewUPnPClient(collector.Config.URL, collector.Config.Username, collector.Config.Password)
+	uPnPClient := NewUPnPClient(collector.Config.URL)
 	values := uPnPClient.Execute()
 
 	extract := func(metric string) float64 {

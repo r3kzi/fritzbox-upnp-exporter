@@ -1,7 +1,6 @@
 # FritzBox UPnP Prometheus Exporter
 
-- build on top of [TR064](https://avm.de/service/schnittstellen/)
-- uses HTTP Digest Authentication with TLS
+- build on top of UPnP
 
 ## Currently exposed metrics
 

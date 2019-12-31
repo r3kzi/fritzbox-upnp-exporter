@@ -6,19 +6,15 @@ import (
 	"regexp"
 )
 
-const TR064ENDPOINT string = "/tr64desc.xml"
+const IGDESCENDPOINT string = "/igddesc.xml"
 
 type UPnPClient struct {
-	URL      string
-	Username string
-	Password string
+	URL string
 }
 
-func NewUPnPClient(url, username, password string) *UPnPClient {
+func NewUPnPClient(url string) *UPnPClient {
 	return &UPnPClient{
-		URL:      fmt.Sprintf("https://%s/tr064", url),
-		Username: username,
-		Password: password,
+		URL: fmt.Sprintf("http://%s:49000", url),
 	}
 }
 
@@ -33,7 +29,7 @@ func (uc *UPnPClient) Execute() map[string]string {
             <s:Body><u:%s xmlns:u='%s'/></s:Body>
         </s:Envelope>`, action.Name, service.ServiceType)
 
-			dr := newRequest(uc.Username, uc.Password, "POST", uc.URL+service.ControlURL, message)
+			dr := newRequest("POST", uc.URL+service.ControlURL, message)
 			dr.Header.Add("Content-Type", "text/xml; charset='utf-8'")
 			dr.Header.Add("SoapAction", fmt.Sprintf("%s#%s", service.ServiceType, action.Name))
 
@@ -64,7 +60,7 @@ func (uc *UPnPClient) Execute() map[string]string {
 func (uc *UPnPClient) parseServices() []Service {
 	services := make([]Service, 0)
 
-	dr := newRequest(uc.Username, uc.Password, "GET", uc.URL+TR064ENDPOINT, "")
+	dr := newRequest("GET", uc.URL+IGDESCENDPOINT, "")
 	decoder := xml.NewDecoder(do(dr))
 	for {
 		t, _ := decoder.Token()
@@ -78,10 +74,8 @@ func (uc *UPnPClient) parseServices() []Service {
 				if err := decoder.DecodeElement(&service, &se); err != nil {
 					panic(err)
 				}
-				if IsServiceWhitelisted(service) {
-					service.Actions = uc.parseActions(service)
-					services = append(services, service)
-				}
+				service.Actions = uc.parseActions(service)
+				services = append(services, service)
 			}
 		}
 	}
@@ -91,7 +85,7 @@ func (uc *UPnPClient) parseServices() []Service {
 func (uc *UPnPClient) parseActions(service Service) []Action {
 	actions := make([]Action, 0)
 
-	dr := newRequest(uc.Username, uc.Password, "GET", uc.URL+service.SCPDURL, "")
+	dr := newRequest("GET", uc.URL+service.SCPDURL, "")
 	decoder := xml.NewDecoder(do(dr))
 	for {
 		t, _ := decoder.Token()
@@ -125,17 +119,4 @@ func IsActionGetOnly(action Action) bool {
 		}
 	}
 	return len(action.Arguments) > 0
-}
-
-func IsServiceWhitelisted(service Service) bool {
-	var whitelistedServices = []string{
-		"urn:WANCIfConfig-com:serviceId:WANCommonInterfaceConfig1",
-	}
-
-	for _, entry := range whitelistedServices {
-		if entry == service.ServiceId {
-			return true
-		}
-	}
-	return false
 }

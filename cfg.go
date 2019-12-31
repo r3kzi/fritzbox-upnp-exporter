@@ -6,15 +6,11 @@ import (
 )
 
 type Config struct {
-	URL      string
-	Username string
-	Password string
+	URL string
 }
 
 func parse(config *Config) error {
 	pflag.StringVar(&config.URL, "url", "fritz.box", "FritzBox URL")
-	pflag.StringVar(&config.Username, "username", "admin", "FritzBox User")
-	pflag.StringVar(&config.Password, "password", "admin", "FritzBox Password")
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
 }
