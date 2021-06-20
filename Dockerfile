@@ -14,6 +14,6 @@ WORKDIR /dist
 
 RUN cp /build/fritzbox-upnp-exporter .
 
-EXPOSE 9624
+EXPOSE 8080
 
 ENTRYPOINT ["/dist/fritzbox-upnp-exporter"]
